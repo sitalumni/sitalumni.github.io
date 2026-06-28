@@ -360,15 +360,22 @@ function setData(records) {
   renderTabs();
 }
 
+function showMessage(msg) {
+  renderTabs();
+  scroller.innerHTML = `<div style="padding:56px 22px;text-align:center;color:var(--text-secondary);font-size:14px;">${msg}</div>`;
+}
+
 async function load() {
-  setData(SAMPLE);   // 먼저 샘플로 즉시 그리기
-  if (!CONFIG.APPS_SCRIPT_URL) return;
+  // URL이 없을 때만(로컬 미리보기) 샘플 표시
+  if (!CONFIG.APPS_SCRIPT_URL) { setData(SAMPLE); return; }
+  showMessage('불러오는 중…');   // 샘플 대신 로딩 표시 → 더미 데이터 깜빡임 없음
   try {
     const res = await fetch(CONFIG.APPS_SCRIPT_URL, { cache:'no-store', redirect:'follow' });
     const json = await res.json();
-    if (json.records && json.records.length) setData(json.records);
+    setData(json.records || []);
   } catch (e) {
-    console.warn('Apps Script 로드 실패 — 샘플 데이터 표시', e);
+    console.warn('Apps Script 로드 실패', e);
+    showMessage('데이터를 불러오지 못했습니다. 잠시 후 새로고침 해주세요.');
   }
 }
 load();
