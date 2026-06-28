@@ -1,0 +1,10 @@
+# 디자인 캔버스 소스 (배포에 불필요 — 로컬 보관용)
+support.js
+_ds/
+*.dc.html
+running_sitrun.html
+.thumbnail
+uploads/기본형_심볼-01.jpg
+
+# OS
+.DS_Store

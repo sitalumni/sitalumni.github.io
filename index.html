@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>첨단융합공학부 동문회 온라인 마라톤 · 리더보드</title>
+<meta name="description" content="첨단융합공학부 동문회 온라인 마라톤 리더보드">
+
+<!-- 폰트 (선택적 향상 — 없어도 시스템 폰트로 대체됨) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+<style>
+  :root{
+    --spotify-green:#3d6ff2; --spotify-green-border:#2f5fe0; --spotify-green-press:#2950c0;
+    --bg-base:#ffffff; --bg-surface:#f3f4f7; --bg-elevated:#eceef2;
+    --text-base:#16181d; --text-secondary:#6b7280; --text-muted:#4b5563;
+    --font-title:'Figtree','Pretendard Variable','Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;
+    --font-ui:'Figtree','Pretendard Variable','Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{ font-family:var(--font-ui); color:var(--text-base); background:var(--bg-base);
+        -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  ::-webkit-scrollbar{ width:6px; }
+  ::-webkit-scrollbar-thumb{ background:#c7ccd4; border-radius:3px; }
+  button{ font-family:inherit; }
+</style>
+</head>
+<body>
+<div style="height:100vh;background:var(--bg-base);display:flex;justify-content:center;">
+  <div style="width:100%;max-width:480px;height:100vh;display:flex;flex-direction:column;">
+
+    <!-- 헤더 -->
+    <div style="padding:30px 22px 0;background:linear-gradient(180deg,#e7eeff 0%,var(--bg-base) 100%);position:relative;overflow:hidden;">
+      <img src="uploads/yonsei-symbol.jpg" alt="" aria-hidden="true" onerror="this.style.display='none'" style="position:absolute;top:-26px;right:-30px;width:160px;height:160px;object-fit:contain;opacity:0.08;mix-blend-mode:multiply;pointer-events:none;" />
+      <div style="display:flex;align-items:center;gap:8px;position:relative;font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--spotify-green);margin-bottom:8px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--spotify-green);box-shadow:0 0 8px var(--spotify-green);"></span>LIVE 리더보드
+      </div>
+      <div id="evName" style="font-family:var(--font-title);font-size:27px;font-weight:900;letter-spacing:-0.03em;line-height:1.12;color:var(--text-base);"></div>
+      <div id="evMeta" style="font-size:13px;color:var(--text-secondary);margin-top:6px;"></div>
+      <div id="noticeBox" style="position:relative;margin-top:16px;background:rgba(255,255,255,0.72);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 4px 16px rgba(61,111,242,0.08);">
+        <span style="flex-shrink:0;margin-top:1px;font-family:var(--font-ui);font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--spotify-green);background:#e7eeff;border-radius:6px;padding:4px 8px;">공지</span>
+        <div id="noticeText" style="font-size:13.5px;line-height:1.55;color:var(--text-muted);white-space:pre-line;"></div>
+      </div>
+      <div id="tabs" style="display:flex;gap:24px;margin-top:18px;"></div>
+    </div>
+
+    <!-- 본문 스크롤러 -->
+    <div id="scroller" style="flex:1;overflow-y:auto;position:relative;border-top:1px solid #e9ebef;"></div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   설정 — 이 블록만 수정하면 됩니다.
+
+   SHEET_CSV_URL:
+     1) 구글 폼 응답 시트 → 파일 → 공유 → 웹에 게시(Publish to web)
+     2) 게시 대상: 응답 시트(보통 '설문지 응답 시트1'), 형식: CSV(쉼표로 구분)
+     3) 생성된 .../pub?gid=0&single=true&output=csv 링크를 아래에 붙여넣기
+     비워두면 아래 샘플 데이터로 표시됩니다.
+
+   시트(=폼 응답)의 열은 "헤더 이름"으로 자동 인식합니다. 순서 무관.
+     · 학번        (헤더에 '학번' 포함)
+     · 이름        ('이름' 또는 '성함' 포함)
+     · 트랙        ('트랙'·'종목'·'코스' 포함, 값: 5km / 10km)
+     · 거리        ('거리' 포함, 이번 기록의 달린 거리 km, 숫자)
+     · 기록        ('기록'·'시간'·'페이스'·'pace' 포함)
+            - 완주 시간 형식(25:30, 1:02:48) → km당 페이스 자동 계산
+            - 또는 페이스 직접 입력(5:30/km)도 인식
+     · 검증(선택)  ('검증'·'확인'·'verif' 포함, 값이 ✓·y·예·1 이면 검증됨)
+   ============================================================ */
+const CONFIG = {
+  SHEET_CSV_URL: "",
+  eventName: "첨단융합공학부 동문회 온라인 마라톤",
+  eventMeta: "2026 Summer",
+  notice: "기록은 매주 일요일 자정에 마감되어 월요일 오전에 갱신됩니다.\n완주 인증샷은 구글 폼에 함께 제출해 주세요!",
+  onlyVerified: false,   // true 로 두면 '검증됨' 기록만 순위에 반영
+};
+
+const TABS = [
+  { label: '5km',     key: '5km' },
+  { label: '10km',    key: '10km' },
+  { label: '누적 거리', key: 'cum' },
+];
+
+/* ---- 샘플 데이터 (SHEET_CSV_URL 비어있을 때) : {track, studentId, name, distance, time} ---- */
+const SAMPLE = [
+  { track:'5km', studentId:'08', name:'김도현', distance:5, time:'19:42' },
+  { track:'5km', studentId:'16', name:'신유나', distance:5, time:'20:15' },
+  { track:'5km', studentId:'05', name:'박준호', distance:5, time:'21:03' },
+  { track:'5km', studentId:'15', name:'최민지', distance:5, time:'21:48' },
+  { track:'5km', studentId:'10', name:'정우성', distance:5, time:'22:30' },
+  { track:'5km', studentId:'18', name:'한지민', distance:5, time:'23:12' },
+  { track:'5km', studentId:'03', name:'오세훈', distance:5, time:'24:05' },
+  { track:'10km', studentId:'05', name:'박준호', distance:10, time:'41:20' },
+  { track:'10km', studentId:'08', name:'김도현', distance:10, time:'43:05' },
+  { track:'10km', studentId:'10', name:'정우성', distance:10, time:'44:50' },
+  { track:'10km', studentId:'16', name:'신유나', distance:10, time:'46:30' },
+  { track:'10km', studentId:'18', name:'한지민', distance:10, time:'48:10' },
+  { track:'10km', studentId:'07', name:'임재현', distance:10, time:'1:02:48' },
+  // 누적용 추가 기록
+  { track:'5km', studentId:'10', name:'정우성', distance:5, time:'22:50' },
+  { track:'5km', studentId:'18', name:'한지민', distance:8.4, time:'40:00' },
+  { track:'10km', studentId:'10', name:'정우성', distance:10, time:'45:30' },
+  { track:'5km', studentId:'08', name:'김도현', distance:6, time:'25:00' },
+];
+
+/* ========================= 로직 ========================= */
+let SECTIONS = [];   // 캐시: 탭 전환 시 재생성 금지 (스크롤 위치 보존)
+let activeTab = 0;
+const scroller = document.getElementById('scroller');
+
+document.getElementById('evName').textContent = CONFIG.eventName;
+document.getElementById('evMeta').textContent = CONFIG.eventMeta;
+if (CONFIG.notice) { document.getElementById('noticeText').textContent = CONFIG.notice; }
+else { document.getElementById('noticeBox').style.display = 'none'; }
+
+/* CSV 파서 — 따옴표로 감싼 필드(쉼표·줄바꿈 포함) 처리 */
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* 헤더 이름으로 열 인덱스 찾기 */
+function colIndex(headers, keywords) {
+  for (let i = 0; i < headers.length; i++) {
+    const h = (headers[i] || '').toLowerCase();
+    if (keywords.some(k => h.includes(k))) return i;
+  }
+  return -1;
+}
+
+/* 트랙 값 정규화 */
+function normTrack(v) {
+  const s = String(v || '').toLowerCase().replace(/\s/g, '');
+  if (s.includes('10')) return '10km';
+  if (s.includes('5')) return '5km';
+  return '';
+}
+
+/* "H:MM:SS"·"MM:SS"·"M:SS" → 초 */
+function toSeconds(t) {
+  const p = String(t).trim().split(':').map(Number);
+  if (p.some(isNaN)) return NaN;
+  return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p.length === 2 ? p[0]*60 + p[1] : p[0];
+}
+
+/* 기록 입력 → km당 페이스(초). 페이스 직접입력(5:30/km)도 인식 */
+function paceSeconds(record, dist) {
+  const raw = String(record || '').trim();
+  if (/\/\s*km/i.test(raw) || /pace|페이스/i.test(raw)) {
+    const m = raw.match(/(\d+):(\d+)/);
+    if (m) return (+m[1])*60 + (+m[2]);
+  }
+  const sec = toSeconds(raw);
+  if (isNaN(sec) || !dist) return NaN;
+  return sec / dist;
+}
+
+function fmtPace(secPerKm) {
+  const s = Math.round(secPerKm);
+  return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0') + '/km';
+}
+
+function isVerified(v) {
+  const s = String(v || '').trim().toLowerCase();
+  return ['✓','y','yes','예','o','true','1','검증','확인'].includes(s);
+}
+
+/* 원본 응답 행 → 정규화된 기록 배열 */
+function recordsFromRows(rows) {
+  if (!rows.length) return [];
+  const H = rows[0];
+  const iId = colIndex(H, ['학번']);
+  const iName = colIndex(H, ['이름','성함']);
+  const iTrack = colIndex(H, ['트랙','종목','코스']);
+  const iDist = colIndex(H, ['거리']);
+  const iRec = colIndex(H, ['기록','시간','페이스','pace']);
+  const iVer = colIndex(H, ['검증','확인','verif']);
+  const out = [];
+  for (let r = 1; r < rows.length; r++) {
+    const c = rows[r]; if (!c || !c.length) continue;
+    const name = (iName>=0 ? c[iName] : '').trim();
+    const track = normTrack(iTrack>=0 ? c[iTrack] : '');
+    if (!name && !track) continue;
+    out.push({
+      studentId: (iId>=0 ? c[iId] : '').trim(),
+      name,
+      track,
+      distance: parseFloat((iDist>=0 ? c[iDist] : '').toString().replace(/[^0-9.]/g,'')) || 0,
+      time: (iRec>=0 ? c[iRec] : '').trim(),
+      verified: iVer>=0 ? isVerified(c[iVer]) : false,
+    });
+  }
+  return out;
+}
+
+const personKey = r => (r.studentId || '') + '|' + r.name;
+
+/* 5km / 10km : 사람별 최고(빠른) 페이스 1건, 페이스 오름차순 */
+function buildTimed(records, trackKey) {
+  const distFallback = trackKey === '10km' ? 10 : 5;
+  const best = new Map();
+  records.filter(r => r.track === trackKey)
+         .filter(r => !CONFIG.onlyVerified || r.verified)
+         .forEach(r => {
+    const dist = r.distance || distFallback;
+    const ps = paceSeconds(r.time, dist);
+    if (isNaN(ps)) return;
+    const k = personKey(r);
+    const prev = best.get(k);
+    if (!prev || ps < prev.ps) best.set(k, { ...r, ps });
+  });
+  return [...best.values()].sort((a,b) => a.ps - b.ps)
+    .map((e,i) => ({ rank:i+1, name:e.name, studentId:e.studentId, disp:fmtPace(e.ps), verified:e.verified }));
+}
+
+/* 누적 : 사람별 모든 거리 합, 내림차순 */
+function buildCum(records) {
+  const sum = new Map();
+  records.filter(r => !CONFIG.onlyVerified || r.verified).forEach(r => {
+    const k = personKey(r);
+    const cur = sum.get(k) || { name:r.name, studentId:r.studentId, total:0, verified:false };
+    cur.total += r.distance || 0;
+    cur.verified = cur.verified || r.verified;
+    sum.set(k, cur);
+  });
+  return [...sum.values()].filter(e => e.total > 0).sort((a,b) => b.total - a.total)
+    .map((e,i) => ({ rank:i+1, name:e.name, studentId:e.studentId, disp:e.total.toFixed(1)+' km', verified:e.verified }));
+}
+
+function buildSections(records) {
+  return TABS.map(t => {
+    const rows = t.key === 'cum' ? buildCum(records) : buildTimed(records, t.key);
+    return {
+      key:t.key, label:t.label,
+      unit: t.key === 'cum' ? '누적 거리' : '페이스',
+      p1:rows[0], p2:rows[1], p3:rows[2], rest:rows.slice(3),
+    };
+  });
+}
+
+/* ========================= 렌더 ========================= */
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const vbadge = v => v ? ' <span title="기록 검증됨" style="color:var(--spotify-green);font-size:0.85em;">✓</span>' : '';
+const nm = p => p ? esc(p.name) : '—';
+const sid = p => p && p.studentId ? esc(p.studentId)+'학번' : '&nbsp;';
+const dp = p => p ? esc(p.disp) : '—';
+
+function podiumCard(p, place) {
+  const styleMap = {
+    2:{ flex:'1', bg:'var(--bg-surface)', top:'#b3b9c2', numColor:'#7f8893', label:'2ND', big:'36px', extra:'' },
+    1:{ flex:'1.22', bg:'linear-gradient(180deg,#3d6ff2 0%,#2f5fe0 100%)', top:'#bcd0ff', numColor:'#ffffff', label:'CHAMPION', big:'52px',
+        extra:'border:1px solid var(--spotify-green-border);box-shadow:0 12px 34px rgba(61,111,242,0.28);' },
+    3:{ flex:'1', bg:'var(--bg-surface)', top:'#d8924f', numColor:'#d8924f', label:'3RD', big:'36px', extra:'' },
+  };
+  const s = styleMap[place];
+  const nameColor = place===1 ? '#ffffff' : 'var(--text-base)';
+  const sidColor  = place===1 ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)';
+  const dispColor = place===1 ? '#ffffff' : 'var(--text-base)';
+  const pad = place===1 ? '18px 10px 22px' : '16px 10px';
+  const radius = place===1 ? '16px' : '14px';
+  const crown = place===1 ? '<div style="font-size:20px;line-height:1;">👑</div>' : '';
+  const labelGap = place===1 ? 'margin-top:4px;' : '';
+  return `
+    <div style="flex:${s.flex};background:${s.bg};border-top:3px solid ${s.top};border-radius:${radius};padding:${pad};text-align:center;${s.extra}">
+      ${crown}
+      <div style="font-family:var(--font-title);font-size:${s.big};font-weight:900;color:${s.numColor};line-height:1;${labelGap}">${place}</div>
+      <div style="font-size:${place===1?11:10}px;font-weight:800;letter-spacing:${place===1?2:1.8}px;color:${s.numColor};margin-top:3px;">${s.label}</div>
+      <div style="font-size:${place===1?17:15}px;font-weight:${place===1?900:800};color:${nameColor};margin-top:12px;">${nm(p)}${vbadge(p&&p.verified)}</div>
+      <div style="font-size:11px;color:${sidColor};">${sid(p)}</div>
+      <div style="font-size:${place===1?21:16}px;font-weight:900;font-variant-numeric:tabular-nums;color:${dispColor};margin-top:8px;">${dp(p)}</div>
+    </div>`;
+}
+
+function sectionHTML(sec) {
+  const restRows = sec.rest.map(r => `
+    <div style="display:flex;align-items:center;gap:16px;padding:14px 6px;border-bottom:1px solid #eaecef;">
+      <span style="width:26px;text-align:center;color:var(--text-secondary);font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;">${r.rank}</span>
+      <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;">
+        <span style="font-weight:700;font-size:16px;color:var(--text-base);white-space:nowrap;flex-shrink:0;">${esc(r.name)}${vbadge(r.verified)}</span>
+        <span style="font-size:12px;color:var(--text-secondary);flex-shrink:0;">${r.studentId?esc(r.studentId)+'학번':''}</span>
+      </div>
+      <span style="font-variant-numeric:tabular-nums;font-weight:800;font-size:16px;color:var(--text-base);">${esc(r.disp)}</span>
+    </div>`).join('');
+
+  const empty = !sec.p1 ? `<div style="padding:30px 6px;text-align:center;color:var(--text-secondary);font-size:14px;">아직 기록이 없어요. 첫 주자가 되어보세요!</div>` : '';
+
+  return `
+    <div data-sec="1" style="padding:20px 18px 30px;border-top:9px solid #f1f2f5;">
+      <div style="display:flex;align-items:baseline;gap:9px;margin:0 2px 16px;">
+        <span style="font-family:var(--font-title);font-size:21px;font-weight:900;letter-spacing:-0.02em;color:var(--text-base);">${esc(sec.label)}</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-secondary);">${esc(sec.unit)} · TOP 3</span>
+      </div>
+      ${ sec.p1 ? `
+      <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:24px;">
+        ${podiumCard(sec.p2,2)}
+        ${podiumCard(sec.p1,1)}
+        ${podiumCard(sec.p3,3)}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px 8px;border-bottom:1px solid #e5e7eb;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-secondary);">순위</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-secondary);">${esc(sec.unit)}</span>
+      </div>
+      ${restRows}` : empty }
+    </div>`;
+}
+
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = TABS.map((t,i) => {
+    const inner = i === activeTab
+      ? `<span style="color:var(--text-base);border-bottom:2.5px solid var(--spotify-green);padding-bottom:10px;">${t.label}</span>`
+      : `<span style="color:var(--text-secondary);">${t.label}</span>`;
+    return `<button data-tab="${i}" style="background:none;border:none;cursor:pointer;padding:0 0 12px;font-family:var(--font-ui);font-size:15px;font-weight:700;letter-spacing:0.4px;white-space:nowrap;">${inner}</button>`;
+  }).join('');
+  el.querySelectorAll('button').forEach(b => b.onclick = () => goTo(+b.dataset.tab));
+}
+
+function renderSections() {
+  scroller.innerHTML = SECTIONS.map(sectionHTML).join('');
+}
+
+function goTo(i) {
+  const sec = scroller.querySelectorAll('[data-sec]')[i];
+  if (!sec) return;
+  scroller.scrollTop = Math.min(sec.offsetTop, scroller.scrollHeight - scroller.clientHeight);
+  activeTab = i; renderTabs();
+}
+
+scroller.addEventListener('scroll', () => {
+  const secs = [...scroller.querySelectorAll('[data-sec]')];
+  let idx = 0;
+  for (let k = 0; k < secs.length; k++) if (scroller.scrollTop >= secs[k].offsetTop - 120) idx = k;
+  if (idx !== activeTab) { activeTab = idx; renderTabs(); }
+}, { passive:true });
+
+function setData(records) {
+  SECTIONS = buildSections(records);
+  renderSections();
+  renderTabs();
+}
+
+async function load() {
+  setData(SAMPLE);   // 먼저 샘플로 즉시 그리기
+  if (!CONFIG.SHEET_CSV_URL) return;
+  try {
+    const res = await fetch(CONFIG.SHEET_CSV_URL, { cache:'no-store' });
+    const text = await res.text();
+    const records = recordsFromRows(parseCSV(text.trim()));
+    if (records.length) setData(records);
+  } catch (e) {
+    console.warn('시트 로드 실패 — 샘플 데이터 표시', e);
+  }
+}
+load();
+</script>
+</body>
+</html>
