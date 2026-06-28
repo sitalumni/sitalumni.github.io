@@ -13,7 +13,7 @@
  * 5. index.html 의 CONFIG.APPS_SCRIPT_URL 에 붙여넣기
  *
  * [시트 열 구조] — 헤더 이름에 아래 키워드가 포함되면 자동 인식 (순서 무관)
- *   학번 · 이름(또는 성함) · 트랙(또는 종목·코스) · 거리 · 기록(또는 시간·페이스·pace)
+ *   학번 · 이름(또는 성함) · 트랙(또는 종목·코스·track) · 거리 · 기록(또는 시간·페이스·pace·face)
  *   검증(또는 확인·verif) — 선택. ✓ · y · 예 · 1 이면 검증됨 배지
  *
  * [공개되는 정보] 학번, 이름, 트랙, 거리, 기록, 검증 여부 — 그 외 전부 제외
@@ -54,7 +54,7 @@ function doGet(e) {
     var H      = data[0];
     var iId    = findCol(H, ['학번']);
     var iName  = findCol(H, ['이름', '성함']);
-    var iTrack = findCol(H, ['트랙', '종목', '코스']);
+    var iTrack = findCol(H, ['트랙', '종목', '코스', 'track']);
     var iDist  = findCol(H, ['거리']);
     var iRec   = findCol(H, ['기록', '시간', '페이스', 'pace']);
     var iVer   = findCol(H, ['검증', '확인', 'verif']);
