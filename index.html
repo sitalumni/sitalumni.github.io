@@ -58,24 +58,21 @@
 /* ============================================================
    설정 — 이 블록만 수정하면 됩니다.
 
-   SHEET_CSV_URL:
-     1) 구글 폼 응답 시트 → 파일 → 공유 → 웹에 게시(Publish to web)
-     2) 게시 대상: 응답 시트(보통 '설문지 응답 시트1'), 형식: CSV(쉼표로 구분)
-     3) 생성된 .../pub?gid=0&single=true&output=csv 링크를 아래에 붙여넣기
-     비워두면 아래 샘플 데이터로 표시됩니다.
+   APPS_SCRIPT_URL:
+     1) 구글 시트 메뉴 → 확장 프로그램 → Apps Script
+     2) leaderboard_api.gs 코드를 붙여넣고 저장
+     3) [배포] → [새 배포]
+          - 유형: 웹 앱
+          - 다음 사용자로 실행: 나(스크립트 소유자)
+          - 액세스 권한: 모든 사용자(익명 포함)
+     4) 배포 후 나오는 웹 앱 URL을 아래에 붙여넣기
+     비워두면 샘플 데이터로 표시됩니다.
 
-   시트(=폼 응답)의 열은 "헤더 이름"으로 자동 인식합니다. 순서 무관.
-     · 학번        (헤더에 '학번' 포함)
-     · 이름        ('이름' 또는 '성함' 포함)
-     · 트랙        ('트랙'·'종목'·'코스' 포함, 값: 5km / 10km)
-     · 거리        ('거리' 포함, 이번 기록의 달린 거리 km, 숫자)
-     · 기록        ('기록'·'시간'·'페이스'·'pace' 포함)
-            - 완주 시간 형식(25:30, 1:02:48) → km당 페이스 자동 계산
-            - 또는 페이스 직접 입력(5:30/km)도 인식
-     · 검증(선택)  ('검증'·'확인'·'verif' 포함, 값이 ✓·y·예·1 이면 검증됨)
+   ★ 시트는 비공개로 유지됩니다. Apps Script가 학번·이름·트랙·거리·기록·검증여부
+     만 추려서 반환하며, 사진·이메일·타임스탬프 등 나머지 컬럼은 노출되지 않습니다.
    ============================================================ */
 const CONFIG = {
-  SHEET_CSV_URL: "",
+  APPS_SCRIPT_URL: "",
   eventName: "첨단융합공학부 동문회 온라인 마라톤",
   eventMeta: "2026 Summer",
   notice: "기록은 매주 일요일 자정에 마감되어 월요일 오전에 갱신됩니다.\n완주 인증샷은 구글 폼에 함께 제출해 주세요!",
@@ -362,14 +359,13 @@ function setData(records) {
 
 async function load() {
   setData(SAMPLE);   // 먼저 샘플로 즉시 그리기
-  if (!CONFIG.SHEET_CSV_URL) return;
+  if (!CONFIG.APPS_SCRIPT_URL) return;
   try {
-    const res = await fetch(CONFIG.SHEET_CSV_URL, { cache:'no-store' });
-    const text = await res.text();
-    const records = recordsFromRows(parseCSV(text.trim()));
-    if (records.length) setData(records);
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, { cache:'no-store', redirect:'follow' });
+    const json = await res.json();
+    if (json.records && json.records.length) setData(json.records);
   } catch (e) {
-    console.warn('시트 로드 실패 — 샘플 데이터 표시', e);
+    console.warn('Apps Script 로드 실패 — 샘플 데이터 표시', e);
   }
 }
 load();
