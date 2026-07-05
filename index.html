@@ -122,7 +122,7 @@ document.getElementById('evMeta').textContent = CONFIG.eventMeta;
 function noticeHTML() {
   if (!CONFIG.notice) return '';
   return `
-    <div style="margin:16px 18px 0;background:var(--bg-surface);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
+    <div style="margin:16px 18px 20px;background:var(--bg-surface);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
       <span style="flex-shrink:0;margin-top:1px;font-family:var(--font-ui);font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--spotify-green);background:#e7eeff;border-radius:6px;padding:4px 8px;">공지</span>
       <div style="font-size:13.5px;line-height:1.55;color:var(--text-muted);white-space:pre-line;">${esc(CONFIG.notice)}</div>
     </div>`;
@@ -374,7 +374,7 @@ function sectionHTML(sec) {
   const empty = !sec.p1 ? `<div style="padding:30px 6px;text-align:center;color:var(--text-secondary);font-size:14px;">아직 기록이 없어요. 첫 주자가 되어보세요!</div>` : '';
 
   return `
-    <div data-sec="1" style="padding:20px 18px 30px;border-top:9px solid #f1f2f5;">
+    <div data-sec="1" style="padding:20px 18px 30px;border-top:4px solid #f1f2f5;">
       <div style="display:flex;align-items:baseline;gap:9px;margin:0 2px 4px;">
         <span style="font-family:var(--font-title);font-size:21px;font-weight:900;letter-spacing:-0.02em;color:var(--text-base);">${esc(sec.label)}</span>
         <span style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-secondary);">${esc(sec.unit)} · TOP 3</span>
