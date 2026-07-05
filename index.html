@@ -122,7 +122,7 @@ document.getElementById('evMeta').textContent = CONFIG.eventMeta;
 function noticeHTML() {
   if (!CONFIG.notice) return '';
   return `
-    <div style="margin:16px 18px 20px;background:var(--bg-surface);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
+    <div style="margin:12px 18px;background:var(--bg-surface);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
       <span style="flex-shrink:0;margin-top:1px;font-family:var(--font-ui);font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--spotify-green);background:#e7eeff;border-radius:6px;padding:4px 8px;">공지</span>
       <div style="font-size:13.5px;line-height:1.55;color:var(--text-muted);white-space:pre-line;">${esc(CONFIG.notice)}</div>
     </div>`;
