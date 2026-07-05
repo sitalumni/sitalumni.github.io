@@ -18,8 +18,8 @@
  *   검증(또는 확인·verif) — 선택. ✓ · y · 예 · 1 이면 검증됨 배지
  *
  * [개인정보 보호] 실명은 서버(여기)에서만 처리하고 절대 반환하지 않습니다.
- *   - 닉네임이 있으면 → 닉네임 그대로 표시
- *   - 없으면 → 실명 가운데를 가린 표시명(홍길동→홍*동)만 반환
+ *   - 사람(학번+실명)이 한 번이라도 닉네임을 냈으면 → 그 닉네임으로 전체 통일 표시
+ *   - 한 번도 안 냈으면 → 실명 가운데를 가린 표시명(홍길동→홍*동)만 반환
  *   - 사람 구분용 key 는 실명 해시라 실명을 역산할 수 없습니다.
  *
  * [공개되는 정보] 학번, 표시명(닉네임/마스킹), 트랙, 거리, 기록, 검증 여부 — 그 외 전부 제외
@@ -65,6 +65,13 @@ function personHash(studentId, name) {
   return hex;
 }
 
+// 거리 입력 강건 파싱: "5km" · "5 km" · "5.5킬로" · "10K" · "5,5" → 숫자
+function parseDistance(v) {
+  var s = String(v == null ? '' : v).trim().replace(/,/g, '.');
+  var m = s.match(/\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : 0;
+}
+
 function doGet(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
@@ -83,29 +90,46 @@ function doGet(e) {
     var iRec   = findCol(H, ['기록', '시간', '페이스', 'pace']);
     var iVer   = findCol(H, ['검증', '확인', 'verif']);
 
-    var records = [];
+    // ── 1차: 행을 파싱하고, 사람(학번+실명)별 닉네임을 모음
+    //    같은 사람이 한 번이라도 닉네임을 냈으면 그 닉네임으로 통일(마지막 제출값 우선)
+    var parsed = [];
+    var nickByPerson = {};   // "학번|실명" → 닉네임
     for (var r = 1; r < data.length; r++) {
       var row  = data[r];
       var name = String(iName  >= 0 ? row[iName]  : '').trim();     // 실명 (반환하지 않음)
-      var nick = String(iNick  >= 0 ? row[iNick]  : '').trim();     // 닉네임 (있으면 표시)
+      var nick = String(iNick  >= 0 ? row[iNick]  : '').trim();     // 닉네임
       var track = normTrack(iTrack >= 0 ? row[iTrack] : '');
       if (!name && !track) continue;   // 빈 행 스킵
 
       var studentId = String(iId >= 0 ? row[iId] : '').trim();
-      var display   = nick ? nick : maskName(name);                 // 표시명: 닉네임 우선, 없으면 마스킹 실명
+      var pid = studentId + '|' + name;   // 사람 구분(서버 내부용, 반환 안 함)
+      if (nick) nickByPerson[pid] = nick;
 
-      var distRaw = iDist >= 0 ? String(row[iDist]).replace(/[^0-9.]/g, '') : '';
-      records.push({
+      parsed.push({
+        pid:       pid,
         studentId: studentId,
-        name:      display,                       // 실명 원본 대신 표시명만
-        key:       studentId + '|' + personHash(studentId, name),  // 실명 역산 불가 구분키
+        realName:  name,
         track:     track,
-        distance:  distRaw ? parseFloat(distRaw) : 0,
+        distance:  iDist >= 0 ? parseDistance(row[iDist]) : 0,
         time:      String(iRec >= 0 ? row[iRec] : '').trim(),
         verified:  iVer >= 0 ? isVerified(row[iVer]) : false
-        // 실명, 사진, 이메일, 타임스탬프 등 나머지 열은 응답에 포함하지 않음
       });
     }
+
+    // ── 2차: 사람별 표시명 확정(닉네임 있으면 닉네임, 없으면 마스킹 실명) 후 응답 구성
+    var records = parsed.map(function (p) {
+      var display = nickByPerson[p.pid] ? nickByPerson[p.pid] : maskName(p.realName);
+      return {
+        studentId: p.studentId,
+        name:      display,                                          // 실명 원본 대신 표시명만
+        key:       p.studentId + '|' + personHash(p.studentId, p.realName),  // 실명 역산 불가 구분키
+        track:     p.track,
+        distance:  p.distance,
+        time:      p.time,
+        verified:  p.verified
+        // 실명, 사진, 이메일, 타임스탬프 등 나머지 열은 응답에 포함하지 않음
+      };
+    });
 
     return jsonResponse({ records: records });
 

@@ -165,11 +165,29 @@ function normTrack(v) {
   return '';
 }
 
-/* "H:MM:SS"·"MM:SS"·"M:SS" → 초 */
+/* 시간/페이스 문자열 → 초. 다양한 입력에 강건.
+   지원: "1:02:48" · "5:30" · "5 : 30" · "5분30초" · "5분 30초" · "5분" · "90초"
+        · "1시간2분48초" · "5'30\"" · "5’30”" · 접미사 "/km"·"pace"·"페이스" */
 function toSeconds(t) {
-  const p = String(t).trim().split(':').map(Number);
-  if (p.some(isNaN)) return NaN;
-  return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p.length === 2 ? p[0]*60 + p[1] : p[0];
+  let s = String(t == null ? '' : t).trim().toLowerCase();
+  if (!s) return NaN;
+  s = s.replace(/\/\s*km/g, '').replace(/pace|페이스/g, '').trim();
+  // 한글 단위(시간·분·초)
+  if (/[시분초]/.test(s)) {
+    const h = (s.match(/(\d+)\s*시간/) || [])[1];
+    const m = (s.match(/(\d+)\s*분/) || [])[1];
+    const sec = (s.match(/(\d+)\s*초/) || [])[1];
+    if (h || m || sec) return (+(h||0))*3600 + (+(m||0))*60 + (+(sec||0));
+  }
+  // 따옴표(분'초") → 콜론, 공백 제거
+  s = s.replace(/[’′']/g, ':').replace(/[”″"]/g, '').replace(/\s+/g, '');
+  const parts = s.split(':').filter(x => x !== '');
+  if (!parts.length) return NaN;
+  const nums = parts.map(Number);
+  if (nums.some(isNaN)) return NaN;
+  if (nums.length >= 3) return nums[0]*3600 + nums[1]*60 + nums[2];
+  if (nums.length === 2) return nums[0]*60 + nums[1];
+  return nums[0]*60;   // 단일 숫자는 '분'으로 간주 (예: "5" → 5:00)
 }
 
 /* 기록 입력 → km당 페이스(초).
@@ -177,12 +195,10 @@ function toSeconds(t) {
    - 그 외(총 완주 시간)면 → 시간 ÷ 거리 로 페이스 계산 */
 function paceSeconds(record, dist) {
   const raw = String(record || '').trim();
-  if (CONFIG.recordIsPace || /\/\s*km/i.test(raw) || /pace|페이스/i.test(raw)) {
-    const m = raw.match(/(\d+):(\d+)/);
-    return m ? (+m[1])*60 + (+m[2]) : NaN;
-  }
   const sec = toSeconds(raw);
-  if (isNaN(sec) || !dist) return NaN;
+  if (isNaN(sec)) return NaN;
+  if (CONFIG.recordIsPace || /\/\s*km/i.test(raw) || /pace|페이스/i.test(raw)) return sec;
+  if (!dist) return NaN;
   return sec / dist;
 }
 
