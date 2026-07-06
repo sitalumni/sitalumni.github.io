@@ -413,8 +413,55 @@ function renderTabs() {
   el.querySelectorAll('button').forEach(b => b.onclick = () => goTo(+b.dataset.tab));
 }
 
+/* 검색창 (공지 아래) — 표시명(닉네임/마스킹)·학번으로 검색 */
+function searchHTML() {
+  return `
+    <div style="margin:0 18px 8px;">
+      <input id="searchBox" type="search" placeholder="🔎 닉네임 · 학번으로 검색" autocomplete="off"
+        style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #e2e5ea;border-radius:12px;background:var(--bg-surface);font-family:var(--font-ui);font-size:14px;color:var(--text-base);outline:none;" />
+    </div>`;
+}
+
+function searchResultRow(p) {
+  const bits = [];
+  if (p.best5)  bits.push('5km ' + p.best5.disp);
+  if (p.best10) bits.push('10km ' + p.best10.disp);
+  if (p.cum)    bits.push('누적 ' + p.cum.disp);
+  const sub = [p.studentId ? esc(p.studentId) + '학번' : '', bits.length ? esc(bits.join(' · ')) : '']
+    .filter(Boolean).join(' · ');
+  return `
+    <div data-pid="${esc(p.key)}" style="display:flex;align-items:center;gap:12px;padding:14px 6px;border-bottom:1px solid #eaecef;cursor:pointer;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:16px;color:var(--text-base);">${esc(p.name)}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${sub}</div>
+      </div>
+      <span style="color:var(--text-secondary);font-size:18px;flex-shrink:0;">›</span>
+    </div>`;
+}
+
+function runSearch(q) {
+  const board = document.getElementById('board');
+  const results = document.getElementById('results');
+  if (!results) return;
+  q = String(q || '').trim().toLowerCase();
+  if (!q) { results.style.display = 'none'; results.innerHTML = ''; if (board) board.style.display = ''; return; }
+  const matches = [];
+  PEOPLE.forEach(p => {
+    if (((p.name || '') + ' ' + (p.studentId || '')).toLowerCase().includes(q)) matches.push(p);
+  });
+  matches.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ko'));
+  results.innerHTML = matches.length
+    ? `<div style="padding:6px 18px 4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-secondary);">검색 결과 ${matches.length}명</div>
+       <div style="padding:0 12px 24px;">${matches.map(searchResultRow).join('')}</div>`
+    : `<div style="padding:36px 18px;text-align:center;color:var(--text-secondary);font-size:14px;">'${esc(q)}' 와(과) 일치하는 참가자가 없어요.</div>`;
+  if (board) board.style.display = 'none';
+  results.style.display = '';
+}
+
 function renderSections() {
-  scroller.innerHTML = noticeHTML() + SECTIONS.map(sectionHTML).join('');
+  scroller.innerHTML = noticeHTML() + searchHTML()
+    + '<div id="results" style="display:none;"></div>'
+    + '<div id="board">' + SECTIONS.map(sectionHTML).join('') + '</div>';
 }
 
 function goTo(i) {
@@ -430,6 +477,11 @@ scroller.addEventListener('scroll', () => {
   for (let k = 0; k < secs.length; k++) if (scroller.scrollTop >= secs[k].offsetTop - 120) idx = k;
   if (idx !== activeTab) { activeTab = idx; renderTabs(); }
 }, { passive:true });
+
+/* 검색 입력 → 결과 필터 (검색창은 재렌더 안 되므로 포커스 유지) */
+scroller.addEventListener('input', e => {
+  if (e.target && e.target.id === 'searchBox') runSearch(e.target.value);
+});
 
 /* 스크롤러 클릭: '전체 보기' 펼침 토글 → 없으면 사람 클릭(개인 상세) */
 scroller.addEventListener('click', e => {
