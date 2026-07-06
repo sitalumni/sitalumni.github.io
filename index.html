@@ -361,7 +361,7 @@ function podiumCard(p, place) {
 }
 
 function sectionHTML(sec) {
-  const restRows = sec.rest.map(r => `
+  const rowHTML = r => `
     <div data-pid="${esc(r.key)}" style="display:flex;align-items:center;gap:16px;padding:14px 6px;border-bottom:1px solid #eaecef;cursor:pointer;">
       <span style="width:26px;text-align:center;color:var(--text-secondary);font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;">${r.rank}</span>
       <div style="flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;">
@@ -369,7 +369,15 @@ function sectionHTML(sec) {
         <span style="font-size:12px;color:var(--text-secondary);flex-shrink:0;">${r.studentId?esc(r.studentId)+'학번':''}</span>
       </div>
       <span style="font-variant-numeric:tabular-nums;font-weight:800;font-size:16px;color:var(--text-base);">${esc(r.disp)}</span>
-    </div>`).join('');
+    </div>`;
+
+  const CAP = 7;   // 포디움(1~3위) + 4~10위(7명) = 상위 10명까지 기본 노출
+  const shownRows = sec.rest.slice(0, CAP).map(rowHTML).join('');
+  const hidden = sec.rest.slice(CAP);
+  const moreLabel = `전체 보기 (+${hidden.length}명)`;
+  const moreBlock = hidden.length ? `
+    <div id="more-${esc(sec.key)}" style="display:none;">${hidden.map(rowHTML).join('')}</div>
+    <button data-expand="${esc(sec.key)}" data-label="${esc(moreLabel)}" style="width:100%;margin-top:10px;background:none;border:none;cursor:pointer;padding:12px;font-family:var(--font-ui);font-size:13px;font-weight:700;letter-spacing:0.3px;color:var(--spotify-green);">${esc(moreLabel)}</button>` : '';
 
   const empty = !sec.p1 ? `<div style="padding:30px 6px;text-align:center;color:var(--text-secondary);font-size:14px;">아직 기록이 없어요. 첫 주자가 되어보세요!</div>` : '';
 
@@ -390,7 +398,7 @@ function sectionHTML(sec) {
         <span style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-secondary);">순위</span>
         <span style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-secondary);">${esc(sec.unit)}</span>
       </div>
-      ${restRows}` : empty }
+      ${shownRows}${moreBlock}` : empty }
     </div>`;
 }
 
@@ -423,8 +431,18 @@ scroller.addEventListener('scroll', () => {
   if (idx !== activeTab) { activeTab = idx; renderTabs(); }
 }, { passive:true });
 
-/* 순위표에서 사람 클릭 → 개인 상세 열기 */
+/* 스크롤러 클릭: '전체 보기' 펼침 토글 → 없으면 사람 클릭(개인 상세) */
 scroller.addEventListener('click', e => {
+  const btn = e.target.closest('[data-expand]');
+  if (btn) {
+    const box = document.getElementById('more-' + btn.dataset.expand);
+    if (box) {
+      const opening = box.style.display === 'none';
+      box.style.display = opening ? 'block' : 'none';
+      btn.textContent = opening ? '접기' : btn.dataset.label;
+    }
+    return;
+  }
   const el = e.target.closest('[data-pid]');
   if (el && el.dataset.pid) openPerson(el.dataset.pid);
 });
