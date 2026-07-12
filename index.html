@@ -77,7 +77,7 @@ const CONFIG = {
   eventMeta: "2026 Summer",
   notice: "러닝 기록은 동문회 카카오톡·인스타그램·구글 폼으로 제출해 주세요!\n제출하신 기록은 반영까지 1~2일 정도 걸릴 수 있습니다.\n리더보드에는 트랙당 최고 기록만 표시되며,\n전체 기록은 이름을 누르면 확인할 수 있습니다.",
   onlyVerified: false,   // true 로 두면 '검증됨' 기록만 순위에 반영
-  recordIsPace: true,    // 기록 열이 '1km당 페이스'(5:30/km)이면 true. '총 완주 시간'이면 false
+  recordIsPace: false,   // 기록 열이 '1km당 페이스'(5:30/km)이면 true. '총 소요 시간'(1:24:00·55:30)이면 false
 };
 
 const TABS = [
@@ -294,7 +294,7 @@ function buildSections(records) {
     return {
       key:t.key, label:t.label,
       unit: timed ? '환산 기록' : '누적 거리',
-      note: timed ? `${t.key} 기준 환산 완주 시간 (km당 페이스 × ${stdDistOf(t.key)}km)` : '',
+      note: timed ? `${t.key} 환산 완주 시간 (총 소요시간 ÷ 총 거리 × ${stdDistOf(t.key)}km)` : '',
       p1:rows[0], p2:rows[1], p3:rows[2], rest:rows.slice(3),
     };
   });

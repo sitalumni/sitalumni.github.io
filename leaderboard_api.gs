@@ -13,7 +13,7 @@
  * 5. index.html 의 CONFIG.APPS_SCRIPT_URL 에 붙여넣기
  *
  * [시트 열 구조] — 헤더 이름에 아래 키워드가 포함되면 자동 인식 (순서 무관)
- *   학번 · 이름(또는 성함) · 트랙(또는 종목·코스·track) · 거리 · 기록(또는 시간·페이스·pace·face)
+ *   학번 · 이름(또는 성함) · 트랙(또는 종목·코스·track) · 거리 · 기록(총 소요시간, 예 1:24:00 또는 55:30 — 시간·기록·time 키워드)
  *   닉네임(또는 nickname·닉) — 선택. 있으면 이름 대신 표시(가리지 않음)
  *   검증(또는 확인·verif) — 선택. ✓ · y · 예 · 1 이면 검증됨 배지
  *
@@ -75,7 +75,10 @@ function parseDistance(v) {
 function doGet(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-    var data  = sheet.getDataRange().getValues();
+    // getDisplayValues: 셀에 보이는 '텍스트 그대로' 읽음.
+    //  - 기록 "1:24:00"·"55:30" 이 Date/숫자로 자동 변환되는 것 방지
+    //  - 학번 "08" 앞자리 0 보존
+    var data  = sheet.getDataRange().getDisplayValues();
 
     if (data.length < 2) {
       return jsonResponse({ records: [] });
@@ -87,7 +90,7 @@ function doGet(e) {
     var iNick  = findCol(H, ['닉네임', 'nickname', '닉']);
     var iTrack = findCol(H, ['트랙', '종목', '코스', 'track']);
     var iDist  = findCol(H, ['거리']);
-    var iRec   = findCol(H, ['기록', '시간', '페이스', 'pace']);
+    var iRec   = findCol(H, ['기록', '소요', '시간', 'time', '페이스', 'pace']);
     var iVer   = findCol(H, ['검증', '확인', 'verif']);
 
     // ── 1차: 행을 파싱하고, 사람(학번+실명)별 닉네임을 모음
