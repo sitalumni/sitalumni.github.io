@@ -518,17 +518,37 @@ function showMessage(msg) {
   scroller.innerHTML = `<div style="padding:56px 22px;text-align:center;color:var(--text-secondary);font-size:14px;">${msg}</div>`;
 }
 
+const CACHE_KEY = 'lb_cache_v1';   // 브라우저 로컬 캐시 (재방문 시 즉시 렌더)
+
 async function load() {
   // URL이 없을 때만(로컬 미리보기) 샘플 표시
   if (!CONFIG.APPS_SCRIPT_URL) { setData(SAMPLE); return; }
-  showMessage('불러오는 중…');   // 샘플 대신 로딩 표시 → 더미 데이터 깜빡임 없음
+
+  // 1) 캐시가 있으면 즉시 렌더 → Apps Script 응답(수 초)을 기다리지 않음
+  let cachedStr = null;
+  try { cachedStr = localStorage.getItem(CACHE_KEY); } catch (e) {}
+  let hadCache = false;
+  if (cachedStr) {
+    try {
+      const recs = JSON.parse(cachedStr);
+      if (Array.isArray(recs) && recs.length) { setData(recs); hadCache = true; }
+    } catch (e) { cachedStr = null; }
+  }
+  if (!hadCache) showMessage('불러오는 중…');
+
+  // 2) 백그라운드로 최신 데이터 fetch → '바뀐 경우에만' 다시 그리고 캐시 갱신
   try {
     const res = await fetch(CONFIG.APPS_SCRIPT_URL, { cache:'no-store', redirect:'follow' });
     const json = await res.json();
-    setData(json.records || []);
+    const recs = json.records || [];
+    const freshStr = JSON.stringify(recs);
+    if (freshStr !== cachedStr) {       // 변경 없으면 재렌더 안 함(스크롤·펼침 상태 보존)
+      setData(recs);
+      try { localStorage.setItem(CACHE_KEY, freshStr); } catch (e) {}
+    }
   } catch (e) {
     console.warn('Apps Script 로드 실패', e);
-    showMessage('데이터를 불러오지 못했습니다. 잠시 후 새로고침 해주세요.');
+    if (!hadCache) showMessage('데이터를 불러오지 못했습니다. 잠시 후 새로고침 해주세요.');
   }
 }
 load();
