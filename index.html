@@ -311,7 +311,7 @@ function buildPeople(records) {
     if (!people.has(k)) people.set(k, { key:k, studentId:r.studentId, name:r.name, subs:[] });
     const dist = r.distance || 0;
     const ps = paceSeconds(r.time, dist || stdDistOf(r.track));
-    people.get(k).subs.push({ track:r.track, distance:dist, ps, pace:isNaN(ps)?'—':fmtPace(ps), verified:r.verified });
+    people.get(k).subs.push({ track:r.track, distance:dist, ps, pace:isNaN(ps)?'—':fmtPace(ps), time:r.time, date:r.date||'', verified:r.verified });
   });
   people.forEach((p, k) => {
     p.best5 = rows5.find(x => x.key === k) || null;
@@ -321,8 +321,8 @@ function buildPeople(records) {
     const bestPs = {};
     p.subs.forEach(s => { if (!isNaN(s.ps) && (bestPs[s.track] === undefined || s.ps < bestPs[s.track])) bestPs[s.track] = s.ps; });
     p.subs.forEach(s => { s.best = !isNaN(s.ps) && s.ps === bestPs[s.track]; });
-    // 빠른 기록이 위로 오도록 정렬(트랙 무관, 페이스 오름차순), 없는 값은 뒤로
-    p.subs.sort((a, b) => (isNaN(a.ps) ? Infinity : a.ps) - (isNaN(b.ps) ? Infinity : b.ps));
+    // 최근 제출이 위로 오도록(시트는 시간순 저장 → 뒤집기)
+    p.subs.reverse();
   });
   return people;
 }
@@ -468,13 +468,20 @@ function openPerson(key) {
   const p = PEOPLE.get(key);
   if (!p) return;
   const rankTxt = row => row ? row.rank + '위' : '기록 없음';
-  const subRows = p.subs.map(s => `
-    <div style="display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid #eaecef;">
+  const subRows = p.subs.map(s => {
+    const meta = [s.distance ? esc(s.distance + 'km') : '', s.time ? esc(s.time) : '']
+      .filter(Boolean).join(' · ');
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid #eaecef;">
       <span style="flex-shrink:0;font-family:var(--font-ui);font-size:11px;font-weight:800;letter-spacing:0.5px;color:var(--spotify-green);background:#e7eeff;border-radius:6px;padding:4px 9px;">${esc(s.track||'기타')}</span>
-      <div style="flex:1;min-width:0;font-size:13px;color:var(--text-secondary);font-variant-numeric:tabular-nums;">${s.distance?esc(s.distance+'km 완주'):''}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums;">${s.date ? esc(s.date) : ''}</div>
+        <div style="font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums;margin-top:1px;">${meta}</div>
+      </div>
       <div style="flex-shrink:0;font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;color:var(--text-base);">${esc(s.pace)}${vbadge(s.verified)}</div>
       ${ s.best ? '<span style="flex-shrink:0;font-size:14px;" title="개인 최고 페이스">⭐</span>' : '<span style="flex-shrink:0;width:14px;"></span>' }
-    </div>`).join('') || '<div style="padding:24px 4px;text-align:center;color:var(--text-secondary);font-size:13px;">제출한 기록이 없어요.</div>';
+    </div>`;
+  }).join('') || '<div style="padding:24px 4px;text-align:center;color:var(--text-secondary);font-size:13px;">제출한 기록이 없어요.</div>';
 
   personPanel.innerHTML = `
     <div style="padding:16px 20px 22px;background:linear-gradient(180deg,#e7eeff 0%,var(--bg-base) 100%);position:relative;overflow:hidden;">

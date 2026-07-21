@@ -72,6 +72,12 @@ function parseDistance(v) {
   return m ? parseFloat(m[0]) : 0;
 }
 
+// 제출 타임스탬프 → "yy.MM.dd HH:mm" (개인 상세에서 본인 기록 구분용)
+function fmtTs(v, tz) {
+  if (v instanceof Date) return Utilities.formatDate(v, tz, 'yy.MM.dd HH:mm');
+  return String(v == null ? '' : v).trim();   // 문자열이면 그대로
+}
+
 function doGet(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
@@ -92,6 +98,11 @@ function doGet(e) {
     var iDist  = findCol(H, ['거리']);
     var iRec   = findCol(H, ['기록', '소요', '시간', 'time', '페이스', 'pace']);
     var iVer   = findCol(H, ['검증', '확인', 'verif']);
+    var iTime  = findCol(H, ['타임스탬프', 'timestamp']);   // 폼 제출 시각(보통 첫 열)
+
+    // 타임스탬프는 실제 Date 값으로 읽어 시간대 안전하게 포맷 (해당 열만 추가로 읽음)
+    var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+    var timeVals = iTime >= 0 ? sheet.getRange(1, iTime + 1, data.length, 1).getValues() : null;
 
     // ── 1차: 행을 파싱하고, 사람(학번+실명)별 닉네임을 모음
     //    같은 사람이 한 번이라도 닉네임을 냈으면 그 닉네임으로 통일(마지막 제출값 우선)
@@ -115,6 +126,7 @@ function doGet(e) {
         track:     track,
         distance:  iDist >= 0 ? parseDistance(row[iDist]) : 0,
         time:      String(iRec >= 0 ? row[iRec] : '').trim(),
+        date:      timeVals ? fmtTs(timeVals[r][0], tz) : '',
         verified:  iVer >= 0 ? isVerified(row[iVer]) : false
       });
     }
@@ -129,8 +141,9 @@ function doGet(e) {
         track:     p.track,
         distance:  p.distance,
         time:      p.time,
+        date:      p.date,     // 제출 시각 (개인 상세에서 본인 기록 구분용)
         verified:  p.verified
-        // 실명, 사진, 이메일, 타임스탬프 등 나머지 열은 응답에 포함하지 않음
+        // 실명, 사진, 이메일 등 나머지 열은 응답에 포함하지 않음
       };
     });
 
