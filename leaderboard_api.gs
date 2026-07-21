@@ -15,6 +15,7 @@
  * [시트 열 구조] — 헤더 이름에 아래 키워드가 포함되면 자동 인식 (순서 무관)
  *   학번 · 이름(또는 성함) · 트랙(또는 종목·코스·track) · 거리 · 기록(총 소요시간, 예 1:24:00 또는 55:30 — 시간·기록·time 키워드)
  *   닉네임(또는 nickname·닉) — 선택. 있으면 이름 대신 표시(가리지 않음)
+ *   러닝 일자(또는 날짜·date) — 선택. 개인 상세에 표시. 없으면 폼 타임스탬프로 대체
  *   검증(또는 확인·verif) — 선택. ✓ · y · 예 · 1 이면 검증됨 배지
  *
  * [개인정보 보호] 실명은 서버(여기)에서만 처리하고 절대 반환하지 않습니다.
@@ -72,10 +73,10 @@ function parseDistance(v) {
   return m ? parseFloat(m[0]) : 0;
 }
 
-// 제출 타임스탬프 → "yy.MM.dd HH:mm" (개인 상세에서 본인 기록 구분용)
-function fmtTs(v, tz) {
-  if (v instanceof Date) return Utilities.formatDate(v, tz, 'yy.MM.dd HH:mm');
-  return String(v == null ? '' : v).trim();   // 문자열이면 그대로
+// 러닝 일자 → "yy.MM.dd" (개인 상세에서 본인 기록 구분용). Date면 포맷, 문자열이면 그대로
+function fmtDate(v, tz) {
+  if (v instanceof Date) return Utilities.formatDate(v, tz, 'yy.MM.dd');
+  return String(v == null ? '' : v).trim();
 }
 
 function doGet(e) {
@@ -98,11 +99,13 @@ function doGet(e) {
     var iDist  = findCol(H, ['거리']);
     var iRec   = findCol(H, ['기록', '소요', '시간', 'time', '페이스', 'pace']);
     var iVer   = findCol(H, ['검증', '확인', 'verif']);
-    var iTime  = findCol(H, ['타임스탬프', 'timestamp']);   // 폼 제출 시각(보통 첫 열)
+    // 러닝 일자 우선, 없으면 폼 제출 타임스탬프로 폴백
+    var iDate  = findCol(H, ['일자', '날짜', 'date']);
+    if (iDate < 0) iDate = findCol(H, ['타임스탬프', 'timestamp']);
 
-    // 타임스탬프는 실제 Date 값으로 읽어 시간대 안전하게 포맷 (해당 열만 추가로 읽음)
+    // 날짜는 실제 Date 값으로 읽어 시간대 안전하게 포맷 (해당 열만 추가로 읽음)
     var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
-    var timeVals = iTime >= 0 ? sheet.getRange(1, iTime + 1, data.length, 1).getValues() : null;
+    var dateVals = iDate >= 0 ? sheet.getRange(1, iDate + 1, data.length, 1).getValues() : null;
 
     // ── 1차: 행을 파싱하고, 사람(학번+실명)별 닉네임을 모음
     //    같은 사람이 한 번이라도 닉네임을 냈으면 그 닉네임으로 통일(마지막 제출값 우선)
@@ -126,7 +129,7 @@ function doGet(e) {
         track:     track,
         distance:  iDist >= 0 ? parseDistance(row[iDist]) : 0,
         time:      String(iRec >= 0 ? row[iRec] : '').trim(),
-        date:      timeVals ? fmtTs(timeVals[r][0], tz) : '',
+        date:      dateVals ? fmtDate(dateVals[r][0], tz) : '',
         verified:  iVer >= 0 ? isVerified(row[iVer]) : false
       });
     }
