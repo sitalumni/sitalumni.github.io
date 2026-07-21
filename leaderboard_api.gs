@@ -73,9 +73,9 @@ function parseDistance(v) {
   return m ? parseFloat(m[0]) : 0;
 }
 
-// 러닝 일자 → "yy.MM.dd" (개인 상세에서 본인 기록 구분용). Date면 포맷, 문자열이면 그대로
+// 러닝 일자 → "yy.MM.dd HH:mm" (개인 상세에서 본인 기록 구분용). Date면 포맷, 문자열이면 그대로
 function fmtDate(v, tz) {
-  if (v instanceof Date) return Utilities.formatDate(v, tz, 'yy.MM.dd');
+  if (v instanceof Date) return Utilities.formatDate(v, tz, 'yy.MM.dd HH:mm');
   return String(v == null ? '' : v).trim();
 }
 
